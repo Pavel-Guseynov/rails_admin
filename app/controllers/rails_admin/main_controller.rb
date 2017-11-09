@@ -89,12 +89,22 @@ module RailsAdmin
       model_config.send(action).with(controller: self, view: view_context, object: @object).visible_fields
     end
 
+    def param_clean(_params)
+      _params.delete_if do |k, v|
+        if v.instance_of?(ActionController::Parameters)
+          param_clean(v)
+        end
+        v.empty? && (k.include?('_id') || k.include?('_ids'))
+      end
+    end
+
     def sanitize_params_for!(action, model_config = @model_config, target_params = params[@abstract_model.param_key])
       return unless target_params.present?
       fields = visible_fields(action, model_config)
       allowed_methods = fields.collect(&:allowed_methods).flatten.uniq.collect(&:to_s) << 'id' << '_destroy'
       fields.each { |field| field.parse_input(target_params) }
       target_params.slice!(*allowed_methods)
+      param_clean(target_params)
       target_params.permit! if target_params.respond_to?(:permit!)
       fields.select(&:nested_form).each do |association|
         children_params = association.multiple? ? target_params[association.method_name].try(:values) : [target_params[association.method_name]].compact

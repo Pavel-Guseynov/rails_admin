@@ -94,6 +94,7 @@ module RailsAdmin
         if v.instance_of?(ActionController::Parameters)
           param_clean(v)
         end
+        return false if v.instance_of?(ActionDispatch::Http::UploadedFile)
         v.empty? && (k.include?('_id') || k.include?('_ids'))
       end
     end
